@@ -1,0 +1,13 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行时生成的配置（包含 token，不应入库）
+config.toml
+
+# IDE
+.idea/
+.vscode/

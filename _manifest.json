@@ -1,0 +1,41 @@
+{
+  "manifest_version": 2,
+  "id": "gscore-plugin",
+  "version": "1.0.0",
+  "name": "GsCore 适配插件",
+  "description": "对接 gsuid_core（早柚核心）：把命中前缀的消息转发给 core 处理，并把回复（文本/图片/合并转发）发回原会话",
+  "author": {
+    "name": "maibot-community",
+    "url": "https://github.com/Genshin-bots/gsuid_core"
+  },
+  "license": "GPL-3.0",
+  "urls": {
+    "repository": "https://github.com/Genshin-bots/gsuid_core",
+    "homepage": "https://github.com/Genshin-bots/gsuid_core",
+    "documentation": "https://docs.gsuid.dev/"
+  },
+  "changelog": "CHANGELOG.md",
+  "plugin_type": "integration",
+  "host_application": {
+    "min_version": "1.4.0",
+    "max_version": "1.99.99"
+  },
+  "sdk": {
+    "min_version": "2.22.0",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [],
+  "capabilities": [
+    "send.text",
+    "send.image",
+    "send.hybrid",
+    "send.forward",
+    "chat.get_stream_by_group_id",
+    "chat.get_stream_by_user_id",
+    "chat.get_all_streams"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "supported_locales": ["zh-CN"]
+  }
+}
