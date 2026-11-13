@@ -56,6 +56,7 @@ class GsClient:
         return {
             "host": gs.host,
             "port": gs.port,
+            "scheme": gs.scheme,
             "route_id": gs.route_id,
             "ws_token": gs.ws_token,
             "interval": gs.reconnect_interval,
@@ -64,7 +65,7 @@ class GsClient:
 
     def ws_url(self) -> str:
         cfg = self._conn_cfg()
-        url = f"ws://{cfg['host']}:{cfg['port']}/ws/{cfg['route_id']}"
+        url = f"{cfg['scheme']}://{cfg['host']}:{cfg['port']}/ws/{cfg['route_id']}"
         if cfg["ws_token"]:
             url += f"?token={cfg['ws_token']}"
         return url
@@ -130,7 +131,9 @@ class GsClient:
                 max_retry = int(cfg["max_retry"] or 0)
                 if max_retry > 0 and self._retry > max_retry:
                     self._plugin.log(
-                        "error", "[GsCore] 已达到最大重试次数 (%d), 停止重试连接", max_retry
+                        "error",
+                        "[GsCore] 已连续 %d 次连接失败, 停止重试; 修改配置或发送 /连接core 可重新连接",
+                        max_retry,
                     )
                     break
                 self._plugin.log(

@@ -1,4 +1,4 @@
-﻿"""maibot_gscore_plugin - MaiBot 对接 gsuid_core（早柚核心）插件.
+"""maibot_gscore_plugin - MaiBot 对接 gsuid_core（早柚核心）插件.
 
 把命中前缀（如 gs/sr/zzz）的 MaiBot 消息经 WebSocket 转发给 gsuid_core，
 并把 core 的回复（文本/图片等）发回原 QQ 会话；命中消息不会进入 LLM 闲聊链路。
@@ -6,8 +6,9 @@
 
 from __future__ import annotations
 
-import aiohttp
 from typing import Any, Literal
+
+import aiohttp
 
 from maibot_sdk import (
     Command,
@@ -81,6 +82,11 @@ class GsCoreSettings(PluginConfigBase):
         description="机器人账号 ID（QQ 号），留空则自动取消息中的 bot 账号",
         json_schema_extra={"label": "机器人账号"},
     )
+    scheme: Literal["ws", "wss"] = Field(
+        default="ws",
+        description="连接协议：ws 明文 / wss TLS 加密（wss 需服务器域名配有有效证书，如 Nginx 反代 + Let's Encrypt）",
+        json_schema_extra={"label": "连接协议"},
+    )
     ws_token: str = Field(
         default="",
         description="core 侧 [bot平台配置] 的 token，未设置鉴权时留空",
@@ -94,8 +100,8 @@ class GsCoreSettings(PluginConfigBase):
         json_schema_extra={"label": "重连间隔（秒）"},
     )
     max_retry: int = Field(
-        default=0,
-        description="最大重试次数，0 表示无限重试",
+        default=5,
+        description="连续连接失败的最大重试次数，0 表示无限重试；配置变更会重置计数并重新连接",
         ge=0,
         le=10000,
         json_schema_extra={"label": "最大重试次数"},
@@ -215,11 +221,27 @@ class GscoreAdapterPlugin(MaiBotPlugin):
         self.log("info", "GsCore 适配器插件已卸载")
 
     async def on_config_update(self, scope: str, config_data: dict[str, Any], version: str) -> None:
+        # 事件驱动入口：宿主 apply_plugin_config → RPC plugin.config_updated → 到达这里。
+        # 页面保存后若始终看不到本日志，说明宿主侧（文件监听→apply）未触发。
+        self.log("info", "[GsCore] 收到配置更新事件: scope=%s, version=%s", scope, version)
         if scope != CONFIG_RELOAD_SCOPE_SELF:
+            self.log("info", "[GsCore] 非 self 范围的配置更新, 忽略 (scope=%s)", scope)
             return
-        if not self.config.plugin.enabled:
+        await self._apply_runtime_config()
+
+    async def _apply_runtime_config(self) -> None:
+        """把当前内存配置应用到运行时（重连或停止）；配置热更新事件触发。"""
+        cfg = self.config
+        gs = cfg.gscore
+        self.log(
+            "info",
+            "[GsCore] 应用配置: enabled=%s scheme=%s host=%s port=%s route_id=%s max_retry=%s",
+            cfg.plugin.enabled, gs.scheme, gs.host, gs.port, gs.route_id, gs.max_retry,
+        )
+        if not cfg.plugin.enabled:
             if self._client is not None:
                 await self._client.stop()
+            self.log("info", "[GsCore] 插件已停用, 连接已停止")
             return
         if self._client is None:
             self._client = GsClient(self)
